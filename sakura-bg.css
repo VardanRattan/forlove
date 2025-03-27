@@ -1,0 +1,92 @@
+/* Beautiful CSS Sakura Background */
+.sakura-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  perspective: 800px;
+}
+
+/* Individual falling petals */
+.petal {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: transform;
+  backface-visibility: visible;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Different petal styles using pure CSS shapes */
+.petal-style1 {
+  width: 30px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, #ffd6e5 0%, #ffb7c5 100%);
+  border-radius: 150% 0 150% 0;
+}
+
+.petal-style2 {
+  width: 25px;
+  height: 25px;
+  background: radial-gradient(ellipse at center, #ffe1ed 0%, #ffc1ce 100%);
+  border-radius: 150% 0 150% 150%;
+}
+
+.petal-style3 {
+  width: 22px;
+  height: 18px;
+  background: radial-gradient(ellipse at center, #ffecf3 0%, #ffdbea 100%);
+  border-radius: 150% 150% 0 150%;
+}
+
+.petal-style4 {
+  width: 28px;
+  height: 22px;
+  background: radial-gradient(ellipse at center, #ffdaea 0%, #ffadc0 100%);
+  border-radius: 0 150% 150% 150%;
+}
+
+/* Looping fall animation */
+@keyframes fall {
+  0% {
+    transform: translateY(-10%) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sway-1 {
+  0%, 100% { margin-left: 0; }
+  50% { margin-left: 30px; }
+}
+
+@keyframes sway-2 {
+  0%, 100% { margin-left: 15px; }
+  50% { margin-left: -15px; }
+}
+
+@keyframes sway-3 {
+  0%, 100% { margin-left: -20px; }
+  50% { margin-left: 20px; }
+}
+
+@keyframes sway-4 {
+  0%, 100% { margin-left: 5px; }
+  50% { margin-left: -30px; }
+} 

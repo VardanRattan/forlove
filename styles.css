@@ -1,0 +1,281 @@
+/* Base Styles */
+:root {
+  --primary-color: #ff69b4;
+  --secondary-color: #ff1493;
+  --text-color: #ffe6f2;
+  --success-color: #4CAF50;
+  --danger-color: #f44336;
+  --background-color: #0a0a0a;
+  --font-main: 'Arial', sans-serif;
+  --font-size-base: 1rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: -webkit-fill-available;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  height: 100vh;
+  height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden; /* Prevent scrolling completely */
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Container Styles */
+.container {
+  max-width: 600px;
+  width: 90%;
+  padding: 2rem 1.5rem;
+  margin: 0 auto;
+  z-index: 10;
+  opacity: 0;
+  animation: fadeIn 2s ease-out forwards;
+  will-change: opacity, transform;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Typography */
+h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+}
+
+.verse {
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  margin-bottom: 2rem;
+  line-height: 1.8;
+  opacity: 0.9;
+  max-width: 80ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.question {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin-bottom: 2rem;
+  color: var(--secondary-color);
+  font-weight: 500;
+}
+
+/* Buttons Section */
+.buttons {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  opacity: 0;
+  animation: bounceIn 1s 1s forwards;
+  will-change: transform, opacity;
+  position: relative;
+  min-height: 60px; /* Ensure container height even when buttons change position */
+  margin-bottom: 0; /* Remove bottom margin to prevent extra space */
+}
+
+button {
+  padding: 0.8rem 1.8rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+#yesBtn {
+  background-color: var(--success-color);
+  color: white;
+  transform-origin: center;
+  transition: transform 0.3s ease, font-size 0.3s ease, padding 0.3s ease;
+  position: relative;
+}
+
+#noBtn {
+  background-color: var(--danger-color);
+  color: white;
+  transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 5;
+}
+
+#noBtn:hover {
+  transform: translate(5px, 5px) rotate(5deg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { 
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px));
+  }
+  to { 
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes gentlePulse {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(1.1) rotate(5deg); }
+}
+
+/* Sakura Container - Keep this for the celebration effects */
+.sakura-container {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 30px;
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Celebration Effects */
+.celebration {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+}
+
+.thank-you {
+  position: relative;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  color: white;
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.5s ease;
+  backdrop-filter: blur(3px);
+  margin: 0;
+}
+
+.thank-you.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Audio Controls */
+.audio-control {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  z-index: 100;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+  pointer-events: auto;
+}
+
+.audio-control:hover {
+  opacity: 0.8;
+}
+
+.audio-control button {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  padding: 8px;
+  min-width: auto;
+  cursor: pointer;
+  color: var(--text-color);
+  backdrop-filter: blur(5px);
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  .container {
+    padding: 1.5rem 1rem;
+  }
+
+  button {
+    min-width: 100px;
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .sakura {
+    font-size: 1.2rem;
+  }
+
+  @media (hover: none) {
+    button:hover {
+      transform: none !important;
+    }
+    
+    .audio-control {
+      opacity: 0.7;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+    background: white !important;
+    color: black !important;
+  }
+
+  .container, .container * {
+    visibility: visible;
+  }
+
+  .buttons, .audio-control, .sakura-container {
+    display: none;
+  }
+}

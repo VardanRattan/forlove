@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A special message for someone wonderful">
+    <title>For Love</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="sakura-bg.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- CSS Sakura Background -->
+    <div class="sakura-bg" aria-hidden="true">
+      <!-- Petals will be added via JavaScript -->
+    </div>
+    
+    <div class="container" id="mainContent">
+      <h1 aria-label="For My Special Person">[Her Name]</h1>
+      
+      <div class="verse" id="verse" role="article" aria-label="Romantic Verse">
+        ਯਾਦ ਆਵੇ ਤੇਰੀ ਦੇਖਾਂ ਜਦੋਂ ਚੰਦ ਮੈਂ<br />
+        ਤੂੰ ਹੀ ਦਿਸੇ ਜਦੋਂ ਅੱਖਾਂ ਕਰਾਂ ਬੰਦ ਮੈਂ<br />
+        ਮੈਨੂੰ ਲੱਗੇ ਰਾਧਾ ਤੂੰ ਤੇ ਲਾਲ ਨੰਦ ਮੈਂ<br />
+        ਕਾਸ਼ ਤੈਨੂੰ ਵੀ ਹੋਵਾਂ ਐਦਾਂ ਪਸੰਦ ਮੈਂ
+      </div>
+
+      <div class="question" id="question" role="heading" aria-level="2">
+        Do you love me too?
+      </div>
+
+      <div class="buttons" role="group" aria-label="Response Options">
+        <button id="yesBtn" aria-label="Yes answer">Yes</button>
+        <button id="noBtn" aria-label="No answer">No</button>
+      </div>
+
+      <div class="thank-you" id="thankYou" role="alert" aria-live="polite">
+        Thank you very much! ❤️
+      </div>
+    </div>
+
+    <div class="celebration" aria-hidden="true"></div>
+
+    <audio id="bgMusic" loop preload="auto">
+      <source src="hussan-illahi.mp3" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+
+    <div class="audio-control">
+      <button id="audioToggle" aria-label="Toggle music">
+        <span aria-hidden="true">🔇</span>
+      </button>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="sakura-bg.js"></script>
+  </body>
+</html>
