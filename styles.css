@@ -176,7 +176,10 @@ button {
 }
 
 .thank-you {
-  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
   font-size: clamp(1.8rem, 5vw, 2.5rem);
   color: white;
   background-color: rgba(0, 0, 0, 0.9);
@@ -188,70 +191,134 @@ button {
   transition: all 0.5s ease;
   backdrop-filter: blur(3px);
   margin: 0;
+  box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+  border: 2px solid rgba(255, 105, 180, 0.3);
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  max-width: 80%;
+  text-align: center;
+  top: 65%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
 }
 
 .thank-you.active {
   opacity: 1;
   visibility: visible;
+  animation: thankYouAppear 1s ease-out forwards;
+}
+
+@keyframes thankYouAppear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 /* Audio Controls */
 .audio-control {
   position: fixed;
-  bottom: 15px;
-  right: 15px;
+  bottom: max(15px, env(safe-area-inset-bottom, 15px));
+  right: max(15px, env(safe-area-inset-right, 15px));
   z-index: 100;
   opacity: 0.5;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   pointer-events: auto;
+  transform: scale(1);
+  will-change: transform, opacity;
 }
 
 .audio-control:hover {
   opacity: 0.8;
+  transform: scale(1.05);
 }
 
 .audio-control button {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  padding: 8px;
-  min-width: auto;
-  cursor: pointer;
-  color: var(--text-color);
-  backdrop-filter: blur(5px);
-  background-color: rgba(0, 0, 0, 0.3);
+  width: clamp(40px, 5vw, 50px);
+  height: clamp(40px, 5vw, 50px);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  padding: 0;
+  margin: 0;
+  min-width: unset;
+}
+
+.audio-control button:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.audio-control button:active {
+  transform: scale(0.95);
 }
 
 /* Mobile Optimization */
 @media (max-width: 768px) {
   .container {
     padding: 1.5rem 1rem;
+    width: 95%;
   }
-
+  
   button {
-    min-width: 100px;
     padding: 0.7rem 1.5rem;
     font-size: 1rem;
+    min-width: 100px;
   }
-
-  .sakura {
-    font-size: 1.2rem;
+  
+  .thank-you {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    padding: 1.2rem;
   }
+  
+  .audio-control {
+    bottom: max(10px, env(safe-area-inset-bottom, 10px));
+    right: max(10px, env(safe-area-inset-right, 10px));
+  }
+}
 
-  @media (hover: none) {
-    button:hover {
-      transform: none !important;
-    }
-    
-    .audio-control {
-      opacity: 0.7;
-    }
+/* Small mobile devices */
+@media (max-width: 360px) {
+  .audio-control {
+    bottom: max(8px, env(safe-area-inset-bottom, 8px));
+    right: max(8px, env(safe-area-inset-right, 8px));
+  }
+  
+  .audio-control button {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+}
+
+/* Landscape mode */
+@media (max-height: 500px) and (orientation: landscape) {
+  .audio-control {
+    bottom: max(5px, env(safe-area-inset-bottom, 5px));
+    right: max(5px, env(safe-area-inset-right, 5px));
+  }
+  
+  .audio-control button {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
   }
 }
 
@@ -278,4 +345,37 @@ button {
   .buttons, .audio-control, .sakura-container {
     display: none;
   }
+}
+
+/* Celebration Petal Styles */
+.celebration-petal-style1 {
+  width: 30px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, #ffd700 0%, #ffa500 100%);
+  border-radius: 150% 0 150% 0;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.celebration-petal-style2 {
+  width: 25px;
+  height: 25px;
+  background: radial-gradient(ellipse at center, #ff4500 0%, #ff0000 100%);
+  border-radius: 150% 0 150% 150%;
+  box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+.celebration-petal-style3 {
+  width: 22px;
+  height: 18px;
+  background: radial-gradient(ellipse at center, #00ff00 0%, #008000 100%);
+  border-radius: 150% 150% 0 150%;
+  box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.celebration-petal-style4 {
+  width: 28px;
+  height: 22px;
+  background: radial-gradient(ellipse at center, #0000ff 0%, #000080 100%);
+  border-radius: 0 150% 150% 150%;
+  box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
 }

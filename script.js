@@ -3,7 +3,9 @@
 const CONFIG = {
   MAX_NO_ATTEMPTS: 8,
   YES_GROWTH_FACTOR: 0.15,
-  BUTTON_MOVE_RANGE: 0.4 // 40% of viewport
+  BUTTON_MOVE_RANGE: 0.4, // 40% of viewport
+  MAGNET_DISTANCE: 200,
+  MAGNET_STRENGTH: 0.5
 };
 
 // State
@@ -11,7 +13,8 @@ let state = {
   yesBtnScale: 1,
   noBtnClicks: 0,
   isAudioPlaying: false,
-  audioInitialized: false
+  audioInitialized: false,
+  audioSupported: false
 };
 
 // DOM Elements
@@ -50,36 +53,66 @@ function setupEventListeners() {
   elements.yesBtn.addEventListener('click', handleYesClick);
   elements.audioToggle.addEventListener('click', toggleAudio);
   
-  // Add click event to the entire document to enable audio on first interaction
-  document.addEventListener('click', function firstInteractionHandler(event) {
-    // Skip if this is the audio toggle button itself
-    if (event.target !== elements.audioToggle) {
-      playAudioOnFirstInteraction();
-    }
-    // Remove this event listener after first interaction
-    document.removeEventListener('click', firstInteractionHandler);
-  }, { once: true });
+  // Add multiple event listeners for first interaction
+  const firstInteractionEvents = ['click', 'touchstart', 'keydown'];
+  firstInteractionEvents.forEach(eventType => {
+    document.addEventListener(eventType, function firstInteractionHandler(event) {
+      // Skip if this is the audio toggle button itself
+      if (event.target !== elements.audioToggle) {
+        playAudioOnFirstInteraction();
+      }
+      // Remove all first interaction listeners
+      firstInteractionEvents.forEach(type => {
+        document.removeEventListener(type, firstInteractionHandler);
+      });
+    }, { once: true });
+  });
 }
 
 // Audio Handling
 function handleAudio() {
-  // Set initial volume but don't autoplay - we'll play on first interaction
-  elements.bgMusic.volume = 0.2;
-  state.isAudioPlaying = false;
-  state.audioInitialized = false;
+  // Check if audio is supported
+  state.audioSupported = !!elements.bgMusic.canPlayType;
   
-  // Update UI to show muted initially
-  elements.audioToggle.innerHTML = '🔇';
+  if (state.audioSupported) {
+    // Set initial volume but don't autoplay - we'll play on first interaction
+    elements.bgMusic.volume = 0.2;
+    elements.bgMusic.muted = true; // Start muted
+    state.isAudioPlaying = false;
+    state.audioInitialized = false;
+    
+    // Update UI to show muted initially
+    elements.audioToggle.innerHTML = '🔇';
+    
+    // Add error handling for audio loading
+    elements.bgMusic.addEventListener('error', (e) => {
+      console.error('Audio loading error:', e);
+      state.audioSupported = false;
+      elements.audioToggle.style.display = 'none';
+    });
+    
+    // Add ended event handler to restart audio if it ends
+    elements.bgMusic.addEventListener('ended', () => {
+      if (state.isAudioPlaying) {
+        elements.bgMusic.play().catch(console.error);
+      }
+    });
+  } else {
+    // Hide audio toggle if audio is not supported
+    elements.audioToggle.style.display = 'none';
+  }
 }
 
 function playAudioOnFirstInteraction() {
-  // Only play if this is the first interaction (audio not yet initialized)
-  if (!state.audioInitialized) {
+  // Only play if audio is supported and not yet initialized
+  if (state.audioSupported && !state.audioInitialized) {
     console.log("First interaction detected, initializing audio");
     
     // Mark as initialized regardless of play success
     state.audioInitialized = true;
     
+    // Unmute and play
+    elements.bgMusic.muted = false;
     elements.bgMusic.play()
       .then(() => {
         console.log("Audio started successfully");
@@ -87,14 +120,18 @@ function playAudioOnFirstInteraction() {
         elements.audioToggle.innerHTML = '🔊';
       })
       .catch(error => {
-        console.log("Audio couldn't play:", error);
+        console.error("Audio couldn't play:", error);
         state.isAudioPlaying = false;
         elements.audioToggle.innerHTML = '🔇';
+        // Try to recover by muting
+        elements.bgMusic.muted = true;
       });
   }
 }
 
 function toggleAudio() {
+  if (!state.audioSupported) return;
+  
   console.log("Audio toggle clicked. Current state:", state.isAudioPlaying);
   
   // Make sure audio is initialized
@@ -111,6 +148,7 @@ function toggleAudio() {
   } else {
     // Currently paused - play it
     console.log("Attempting to play audio");
+    elements.bgMusic.muted = false; // Ensure it's not muted
     elements.bgMusic.play()
       .then(() => {
         console.log("Audio resumed successfully");
@@ -118,16 +156,13 @@ function toggleAudio() {
         elements.audioToggle.innerHTML = '🔊';
       })
       .catch(error => {
-        console.log("Audio couldn't resume:", error);
+        console.error("Audio couldn't resume:", error);
         state.isAudioPlaying = false;
         elements.audioToggle.innerHTML = '🔇';
+        // Try to recover by muting
+        elements.bgMusic.muted = true;
       });
   }
-}
-
-function updateAudioUI(isPlaying) {
-  elements.audioToggle.innerHTML = isPlaying ? '🔊' : '🔇';
-  // We don't modify state.isAudioPlaying here, only update the UI
 }
 
 // No Button Handler (Random Movement Only on Click/Touch)
@@ -174,19 +209,24 @@ function moveButtonRandomly() {
   const btnWidth = btnRect.width;
   const btnHeight = btnRect.height;
   
+  // Get verse position for magnetic effect
+  const verseRect = elements.poem.getBoundingClientRect();
+  const verseCenterX = verseRect.left + verseRect.width / 2;
+  const verseCenterY = verseRect.top + verseRect.height / 2;
+  
   // Calculate the maximum allowed position values
   // Use a much larger safety margin to ensure button is always fully visible
-  const safeMargin = 60; // Increased from 40 to 60
+  const safeMargin = 80; // Increased from 60 to 80 for more safety
   const maxX = windowWidth - btnWidth - safeMargin;
   const maxY = windowHeight - btnHeight - safeMargin;
   
   // Calculate a random position that's guaranteed to be visible
   // Limit to a smaller range for more reliability
-  const randomX = Math.min(Math.max(safeMargin, Math.random() * (maxX - safeMargin)), maxX - safeMargin);
+  let randomX = Math.min(Math.max(safeMargin, Math.random() * (maxX - safeMargin)), maxX - safeMargin);
+  let randomY;
   
   // For Y position, prefer the upper 70% of the visible area
   // but with stricter bounds to ensure visibility
-  let randomY;
   if (Math.random() < 0.8) { // 80% chance to be in the upper portion
     // Upper 60% of the screen with extra safety margin
     randomY = Math.min(Math.max(safeMargin, Math.random() * (maxY * 0.5)), maxY * 0.5);
@@ -195,8 +235,26 @@ function moveButtonRandomly() {
     randomY = Math.min(Math.max(maxY * 0.5 + safeMargin, Math.random() * (maxY * 0.8)), maxY * 0.8);
   }
   
-  // Reset any previous transform
-  elements.noBtn.style.transform = 'none';
+  // Apply magnetic effect
+  const btnCenterX = randomX + btnWidth / 2;
+  const btnCenterY = randomY + btnHeight / 2;
+  
+  // Calculate distance from verse center
+  const dx = btnCenterX - verseCenterX;
+  const dy = btnCenterY - verseCenterY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  
+  // If beyond magnetic distance, pull back towards verse
+  if (distance > CONFIG.MAGNET_DISTANCE) {
+    // Calculate pull direction with reduced strength
+    const pullStrength = CONFIG.MAGNET_STRENGTH * 0.5; // Reduced from 0.5 to 0.25
+    const pullX = (dx / distance) * pullStrength * (distance - CONFIG.MAGNET_DISTANCE);
+    const pullY = (dy / distance) * pullStrength * (distance - CONFIG.MAGNET_DISTANCE);
+    
+    // Apply pull while keeping within viewport bounds
+    randomX = Math.min(Math.max(safeMargin, randomX - pullX), maxX - safeMargin);
+    randomY = Math.min(Math.max(safeMargin, randomY - pullY), maxY - safeMargin);
+  }
   
   // Apply position with fixed positioning
   elements.noBtn.style.position = 'fixed';
@@ -229,22 +287,132 @@ function growYesButton() {
 }
 
 // Yes Button Handler
-function handleYesClick() {
-  // Add a nice scale animation to the yes button before hiding
-  elements.yesBtn.style.transition = 'transform 0.3s ease-out, opacity 0.5s ease-in-out';
-  elements.yesBtn.style.transform = 'scale(1.2)';
+function handleYesClick(e) {
+  e.preventDefault();
   
-  // Fade out the poem and question with a slight delay
+  // Scale up the Yes button slightly before hiding it
+  elements.yesBtn.style.transition = 'transform 0.3s ease';
+  elements.yesBtn.style.transform = 'scale(1.1)';
+  
+  // Hide the buttons, poem, and question with a fade effect
   setTimeout(() => {
-    hideElements([elements.poem, elements.question, elements.yesBtn, elements.noBtn]);
-    showThankYou();
+    elements.yesBtn.style.opacity = '0';
+    elements.noBtn.style.opacity = '0';
+    elements.poem.style.opacity = '0';
+    elements.question.style.opacity = '0';
     
-    // Create a smooth transition between backgrounds
-    createCelebrationBackground();
-    
-    // Trigger the center burst effect
-    setTimeout(triggerCelebration, 300);
+    // After fade out, hide the elements
+    setTimeout(() => {
+      elements.yesBtn.style.display = 'none';
+      elements.noBtn.style.display = 'none';
+      elements.poem.style.display = 'none';
+      elements.question.style.display = 'none';
+      
+      // Trigger the celebration effect
+      triggerCelebration();
+    }, 300);
   }, 200);
+}
+
+// Celebration effect function
+function triggerCelebration() {
+  // Hide the original sakura background with a fade-out effect
+  const sakuraBg = document.querySelector('.sakura-bg');
+  if (sakuraBg) {
+    sakuraBg.style.transition = 'opacity 1s ease-out';
+    sakuraBg.style.opacity = '0';
+    
+    // Remove it after the fade-out completes
+    setTimeout(() => {
+      sakuraBg.remove();
+    }, 1000);
+  }
+  
+  // Show the celebration container
+  elements.celebration.style.display = 'block';
+  
+  // Initialize celebration petals
+  initializeCelebrationPetals();
+  
+  // Start wind changes for celebration
+  setInterval(changeCelebrationWind, 3000);
+  
+  // Show thank you message
+  setTimeout(showThankYou, 1500);
+}
+
+// Initialize celebration petals
+function initializeCelebrationPetals() {
+  // Create petals in batches to avoid performance issues
+  const batchSize = 20;
+  let currentBatch = 0;
+  const totalPetals = 150; // More petals for celebration
+  
+  function createBatch() {
+    const start = currentBatch * batchSize;
+    const end = Math.min(start + batchSize, totalPetals);
+    
+    for (let i = start; i < end; i++) {
+      createCelebrationPetal();
+    }
+    
+    currentBatch++;
+    
+    if (currentBatch * batchSize < totalPetals) {
+      setTimeout(createBatch, 50); // Create next batch after a short delay
+    }
+  }
+  
+  // Start creating batches
+  createBatch();
+}
+
+// Create a single celebration petal
+function createCelebrationPetal() {
+  const petal = document.createElement('div');
+  
+  // Determine petal type (1-4)
+  const petalType = Math.floor(Math.random() * 4) + 1;
+  
+  // Set classes for the petal
+  petal.className = `petal celebration-petal-style${petalType}`;
+  
+  // Set random horizontal position
+  const left = Math.random() * 100;
+  petal.style.left = `${left}%`;
+  
+  // Set random fall and sway duration
+  const fallDuration = getRandomNumber(4, 8); // Faster fall for celebration
+  const swayDuration = fallDuration / 2;
+  
+  // Random initial rotation
+  const rotation = Math.random() * 360;
+  petal.style.transform = `rotate(${rotation}deg)`;
+  
+  // Apply animation with 'infinite' to loop
+  petal.style.animation = `fall ${fallDuration}s linear infinite, sway-${petalType % 4 + 1} ${swayDuration}s ease-in-out infinite`;
+  
+  // Set a random delay so all petals don't start at the same position
+  const randomDelay = Math.random() * fallDuration;
+  petal.style.animationDelay = `-${randomDelay}s`;
+  
+  // Add the petal to the container
+  elements.celebration.appendChild(petal);
+  
+  return petal;
+}
+
+// Change wind parameters for celebration
+function changeCelebrationWind() {
+  const windMagnitude = Math.random() * 6; // Stronger wind for celebration
+  const windDirection = Math.random() > 0.5 ? 1 : -1;
+  
+  // Apply wind effect to existing petals
+  const celebrationPetals = elements.celebration.querySelectorAll('.petal');
+  celebrationPetals.forEach(petal => {
+    const windEffect = windMagnitude * windDirection;
+    petal.style.marginLeft = `${windEffect * 15}px`;
+  });
 }
 
 // Creates a beautiful celebration background to replace the sakura petals
@@ -291,18 +459,6 @@ function createCelebrationBackground() {
 }
 
 // Celebration Effects
-function triggerCelebration() {
-  elements.celebration.style.display = 'block';
-  
-  // Enhanced burst effect with more petals
-  const maxPetals = Math.min(80, window.innerWidth / 7);
-  
-  // Create petals in an outward burst pattern with staggered timing
-  for (let i = 0; i < maxPetals; i++) {
-    setTimeout(() => createEnhancedCelebrationPetal(), i * 12);
-  }
-}
-
 function createEnhancedCelebrationPetal() {
   // Create a shiny celebration petal element instead of using emoji text
   const petal = document.createElement('div');
@@ -458,133 +614,6 @@ function applyColorfulPetalStyles() {
   document.head.appendChild(styleElement);
 }
 
-// Initialize the celebration petals with enhanced animation
-function initializeCelebrationPetals() {
-  // Clear any existing global animation variables
-  if (window.windInterval) {
-    clearInterval(window.windInterval);
-  }
-  
-  // Configure the celebration animation
-  window.SAKURA_CONFIG = {
-    TOTAL_PETALS: 150,          // More petals for celebration
-    WIND_DURATION: 4000,        // Faster wind changes
-    WIND_MAX_SPEED: 5,          // Stronger wind
-    FALL_DURATION_MIN: 4,       // Faster falling
-    FALL_DURATION_MAX: 8,       // Faster falling
-    PETAL_TYPES: 4              // Same number of types
-  };
-  
-  // Initialize wind state
-  window.windMagnitude = 0.5;
-  window.windDirection = 1;
-  window.lastWindChange = 0;
-  window.petals = [];
-  
-  // Create petals with staggered appearance for a cascade effect
-  const totalPetals = window.SAKURA_CONFIG.TOTAL_PETALS;
-  const batchSize = 30; // Create petals in batches for better performance
-  
-  function createPetalsBatch(startIndex, count) {
-    const endIndex = Math.min(startIndex + count, totalPetals);
-    
-    for (let i = startIndex; i < endIndex; i++) {
-      const petal = createBackgroundCelebrationPetal();
-      window.petals.push(petal);
-    }
-    
-    // Continue creating petals in batches until we reach the total
-    if (endIndex < totalPetals) {
-      setTimeout(() => createPetalsBatch(endIndex, count), 100);
-    }
-  }
-  
-  // Start creating petals in batches
-  createPetalsBatch(0, batchSize);
-  
-  // Set up wind changes
-  window.windInterval = setInterval(changeCelebrationWind, window.SAKURA_CONFIG.WIND_DURATION);
-  
-  // Start animation loop
-  requestAnimationFrame(updateCelebrationWind);
-}
-
-// Create a single petal for the celebration background effect with enhanced visual appeal
-function createBackgroundCelebrationPetal() {
-  const petal = document.createElement('div');
-  
-  // Determine petal type (1-4)
-  const petalType = Math.floor(Math.random() * window.SAKURA_CONFIG.PETAL_TYPES) + 1;
-  
-  // Set classes for the petal
-  petal.className = `petal petal-style${petalType}`;
-  
-  // Set random horizontal position
-  const left = Math.random() * 100;
-  petal.style.left = `${left}%`;
-  
-  // Random scale for depth effect
-  const scale = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
-  
-  // Set random fall and sway duration
-  const fallDuration = getRandomNumber(window.SAKURA_CONFIG.FALL_DURATION_MIN, window.SAKURA_CONFIG.FALL_DURATION_MAX);
-  const swayDuration = fallDuration / 2;
-  
-  // Random initial rotation
-  const rotation = Math.random() * 360;
-  petal.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-  
-  // Apply enhanced celebration animation
-  petal.style.animation = `celebration-fall ${fallDuration}s linear infinite, sway-${petalType % 4 + 1} ${swayDuration}s ease-in-out infinite`;
-  
-  // Set a random delay so all petals don't start at the same position
-  const randomDelay = Math.random() * fallDuration;
-  petal.style.animationDelay = `-${randomDelay}s`;
-  
-  // Store properties on the element for later use
-  petal.fallDuration = fallDuration;
-  petal.scale = scale;
-  
-  // Add the petal to the container
-  document.querySelector('.celebration-bg').appendChild(petal);
-  
-  return petal;
-}
-
-// Update wind effect for celebration
-function updateCelebrationWind() {
-  const now = Date.now();
-  const dt = (now - window.lastWindChange) / window.SAKURA_CONFIG.WIND_DURATION;
-  
-  // Smooth sinusoidal interpolation for wind
-  const windEffect = Math.sin(dt * Math.PI) * window.windMagnitude * window.windDirection;
-  
-  // Apply subtle wind variations to some petals
-  if (Math.random() < 0.05) {
-    window.petals.forEach(petal => {
-      if (Math.random() < 0.2) {
-        const variation = (Math.random() * 2 - 1) * windEffect;
-        petal.style.marginLeft = `${variation * 5}px`;
-      }
-    });
-  }
-  
-  requestAnimationFrame(updateCelebrationWind);
-}
-
-// Change wind parameters for celebration
-function changeCelebrationWind() {
-  window.windMagnitude = Math.random() * window.SAKURA_CONFIG.WIND_MAX_SPEED;
-  window.windDirection = Math.random() > 0.5 ? 1 : -1;
-  window.lastWindChange = Date.now();
-  
-  // Apply wind effect to existing petals
-  window.petals.forEach(petal => {
-    const windEffect = window.windMagnitude * window.windDirection;
-    petal.style.marginLeft = `${windEffect * 10}px`;
-  });
-}
-
 function hideElements(elements) {
   elements.forEach(el => {
     if (el) {
@@ -598,13 +627,17 @@ function showThankYou() {
   elements.thankYou.classList.add('active');
   elements.thankYou.style.visibility = 'visible';
   
-  // Position the thank you message in the center of the screen
+  // Position the thank you message in the center of the screen, but lower
   elements.thankYou.style.position = 'fixed';
-  elements.thankYou.style.top = '50%';
+  elements.thankYou.style.top = '65%';
   elements.thankYou.style.left = '50%';
   elements.thankYou.style.transform = 'translate(-50%, -50%)';
   elements.thankYou.style.maxWidth = '80%';
+  elements.thankYou.style.width = 'auto';
   elements.thankYou.style.zIndex = '100';
+  elements.thankYou.style.display = 'flex';
+  elements.thankYou.style.justifyContent = 'center';
+  elements.thankYou.style.alignItems = 'center';
 }
 
 // Helper function for random number generation
