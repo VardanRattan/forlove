@@ -3,9 +3,12 @@
 const CONFIG = {
   MAX_NO_ATTEMPTS: 8,
   YES_GROWTH_FACTOR: 0.15,
-  BUTTON_MOVE_RANGE: 0.4, // 40% of viewport
+  BUTTON_MOVE_RANGE: 0.6, // Increased from 0.4 to 0.6 (60% of viewport)
   MAGNET_DISTANCE: 200,
-  MAGNET_STRENGTH: 0.5
+  MAGNET_STRENGTH: 0.5,
+  SAFE_MARGIN_PERCENT: 0.05, // 5% of screen dimensions as safety margin
+  MIN_SAFE_MARGIN: 20, // Minimum 20px safety margin regardless of screen size
+  BUTTON_VISIBILITY_CHECK_DELAY: 50 // ms delay for visibility check
 };
 
 // State
@@ -14,7 +17,9 @@ let state = {
   noBtnClicks: 0,
   isAudioPlaying: false,
   audioInitialized: false,
-  audioSupported: false
+  audioSupported: false,
+  isProcessingClick: false,
+  celebrationStarted: false  // Add this flag to track celebration state
 };
 
 // DOM Elements
@@ -34,16 +39,72 @@ const SAKURA = ['🌸', '🌺', '✿', '❀', '🌹'];
 
 // Initialization
 function init() {
+  console.log("Initializing application...");
+  
+  // Reset the state
+  state.yesBtnScale = 1;
+  state.noBtnClicks = 0;
+  state.isProcessingClick = false;
+  state.celebrationStarted = false; // Make sure this is reset
+  
+  // Check if elements were found
+  if (!elements.yesBtn || !elements.noBtn) {
+    console.error("Button elements not found!");
+    return;
+  }
+  
+  // Yes button setup
+  elements.yesBtn.style.fontSize = '1.1rem';
+  elements.yesBtn.style.position = 'relative';
+  elements.yesBtn.style.transform = 'scale(1)';
+  elements.yesBtn.style.opacity = '1';
+  elements.yesBtn.style.display = 'block';
+  elements.yesBtn.style.visibility = 'visible';
+  
+  // No button setup - ensure it's in the document flow initially
+  elements.noBtn.style.transform = 'none';
+  elements.noBtn.style.position = 'relative'; // Start with relative positioning
+  elements.noBtn.style.opacity = '1';
+  elements.noBtn.style.display = 'block';
+  elements.noBtn.style.visibility = 'visible';
+  
+  // Remove any classes that might affect positioning
+  elements.noBtn.classList.remove('fixed-position');
+  
+  // Add resize listener to reposition button if needed
+  window.addEventListener('resize', () => {
+    if (!state.celebrationStarted && elements.noBtn.classList.contains('fixed-position')) {
+      moveButtonRandomly();
+    }
+  });
+  
+  // Add periodic boundary check
+  setInterval(() => {
+    if (state.celebrationStarted) return; // Skip during celebration
+    
+    if (elements.noBtn && document.contains(elements.noBtn) && 
+        elements.noBtn.classList.contains('fixed-position')) {
+      const rect = elements.noBtn.getBoundingClientRect();
+      if (rect.right > window.innerWidth || 
+          rect.bottom > window.innerHeight ||
+          rect.left < 0 || 
+          rect.top < 0) {
+        console.log("Boundary check: Button out of bounds, repositioning");
+        moveButtonRandomly();
+      }
+    }
+  }, 1000);
+  
+  // Check button visibility during animation
+  setInterval(ensureButtonVisibility, 200);
+  
+  // Add event listeners
   setupEventListeners();
+  
+  // Handle audio
   handleAudio();
   
-  // Ensure buttons start with proper styling
-  elements.yesBtn.style.fontSize = '1.1rem'; // Base font size
-  elements.yesBtn.style.position = 'relative';
-  
-  // Ensure the No button has a proper starting point
-  elements.noBtn.style.position = 'static'; // Reset to default position in document flow
-  elements.noBtn.style.transform = 'none';  // Clear any transforms
+  console.log("Initialization complete");
 }
 
 // Event Listeners
@@ -165,105 +226,133 @@ function toggleAudio() {
   }
 }
 
-// No Button Handler (Random Movement Only on Click/Touch)
+// No Button Handler - Add celebration check
 function handleNoClick(e) {
   e.preventDefault();
+  if (state.isProcessingClick || state.celebrationStarted) return;
   
-  // Reset any existing transform or position that might cause issues
-  elements.noBtn.style.transform = 'none';
-  
+  state.isProcessingClick = true;
   state.noBtnClicks++;
-  moveButtonRandomly();
-  growYesButton();
-  
-  // Center the Yes button
-  elements.yesBtn.style.position = 'relative';
-  elements.yesBtn.style.left = '0';
-  elements.yesBtn.style.top = '0';
-  
-  // Make sure the No button didn't go out of bounds
-  setTimeout(() => {
-    const btnRect = elements.noBtn.getBoundingClientRect();
-    const isOutOfBounds = 
-      btnRect.left < 0 || 
-      btnRect.right > window.innerWidth ||
-      btnRect.top < 0 || 
-      btnRect.bottom > window.innerHeight;
+
+  // First click - set button to fixed position if needed
+  if (!elements.noBtn.classList.contains('fixed-position')) {
+    elements.noBtn.classList.add('fixed-position');
     
-    if (isOutOfBounds) {
-      // If out of bounds, reposition to center
-      elements.noBtn.style.left = '50%';
-      elements.noBtn.style.top = '50%';
-      elements.noBtn.style.transform = 'translate(-50%, -50%) rotate(5deg)';
-    }
-  }, 50); // Small delay to let the browser update the position
+    // If first click, position button at its current location before moving
+    const rect = elements.noBtn.getBoundingClientRect();
+    elements.noBtn.style.left = `${rect.left}px`;
+    elements.noBtn.style.top = `${rect.top}px`;
+  }
+
+  // Create click trail at pointer position
+  createClickTrail(e.clientX, e.clientY);
+  
+  // Visual click feedback with immediate button movement
+  elements.noBtn.style.transform = 'scale(0.9)';
+  
+  // Move button immediately without waiting
+  requestAnimationFrame(() => {
+    moveButtonRandomly();
+    
+    // Restore normal scale in next frame
+    requestAnimationFrame(() => {
+      // Allow processing new clicks sooner (important for UX)
+      state.isProcessingClick = false;
+      
+      // Grow yes button after button has moved
+      growYesButton();
+    });
+  });
+}
+
+// Function to create visual click trail effect
+function createClickTrail(x, y) {
+  const trail = document.createElement('div');
+  trail.className = 'click-trail';
+  trail.style.left = `${x}px`;
+  trail.style.top = `${y}px`;
+  document.body.appendChild(trail);
+  
+  // Remove trail element after animation completes
+  setTimeout(() => trail.remove(), 500);
 }
 
 function moveButtonRandomly() {
-  // Get the current window dimensions to ensure button stays in viewport
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
+  // Skip completely if we're in celebration mode
+  if (state.celebrationStarted) return;
   
-  // Get button dimensions
-  const btnRect = elements.noBtn.getBoundingClientRect();
-  const btnWidth = btnRect.width;
-  const btnHeight = btnRect.height;
-  
-  // Get verse position for magnetic effect
-  const verseRect = elements.poem.getBoundingClientRect();
-  const verseCenterX = verseRect.left + verseRect.width / 2;
-  const verseCenterY = verseRect.top + verseRect.height / 2;
-  
-  // Calculate the maximum allowed position values
-  // Use a much larger safety margin to ensure button is always fully visible
-  const safeMargin = 80; // Increased from 60 to 80 for more safety
-  const maxX = windowWidth - btnWidth - safeMargin;
-  const maxY = windowHeight - btnHeight - safeMargin;
-  
-  // Calculate a random position that's guaranteed to be visible
-  // Limit to a smaller range for more reliability
-  let randomX = Math.min(Math.max(safeMargin, Math.random() * (maxX - safeMargin)), maxX - safeMargin);
-  let randomY;
-  
-  // For Y position, prefer the upper 70% of the visible area
-  // but with stricter bounds to ensure visibility
-  if (Math.random() < 0.8) { // 80% chance to be in the upper portion
-    // Upper 60% of the screen with extra safety margin
-    randomY = Math.min(Math.max(safeMargin, Math.random() * (maxY * 0.5)), maxY * 0.5);
-  } else {
-    // Lower 40% of the screen, but with stricter bounds
-    randomY = Math.min(Math.max(maxY * 0.5 + safeMargin, Math.random() * (maxY * 0.8)), maxY * 0.8);
-  }
-  
-  // Apply magnetic effect
-  const btnCenterX = randomX + btnWidth / 2;
-  const btnCenterY = randomY + btnHeight / 2;
-  
-  // Calculate distance from verse center
-  const dx = btnCenterX - verseCenterX;
-  const dy = btnCenterY - verseCenterY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
-  // If beyond magnetic distance, pull back towards verse
-  if (distance > CONFIG.MAGNET_DISTANCE) {
-    // Calculate pull direction with reduced strength
-    const pullStrength = CONFIG.MAGNET_STRENGTH * 0.5; // Reduced from 0.5 to 0.25
-    const pullX = (dx / distance) * pullStrength * (distance - CONFIG.MAGNET_DISTANCE);
-    const pullY = (dy / distance) * pullStrength * (distance - CONFIG.MAGNET_DISTANCE);
+  // Use requestAnimationFrame for smooth animation
+  requestAnimationFrame(() => {
+    const btn = elements.noBtn;
     
-    // Apply pull while keeping within viewport bounds
-    randomX = Math.min(Math.max(safeMargin, randomX - pullX), maxX - safeMargin);
-    randomY = Math.min(Math.max(safeMargin, randomY - pullY), maxY - safeMargin);
-  }
-  
-  // Apply position with fixed positioning
-  elements.noBtn.style.position = 'fixed';
-  elements.noBtn.style.left = `${randomX}px`;
-  elements.noBtn.style.top = `${randomY}px`;
-  
-  // Add rotation after positioning
-  const randomRotation = Math.random() * 20 - 10; // -10 to +10 degrees
-  elements.noBtn.style.transform = `rotate(${randomRotation}deg)`;
+    // Make sure the button still exists in DOM
+    if (!btn || !document.contains(btn)) return;
+    
+    const btnRect = btn.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Calculate safe area with dynamic margins
+    const marginX = Math.max(vw * 0.05, 30);
+    const marginY = Math.max(vh * 0.05, 30);
+    
+    // Available movement space
+    const maxX = vw - btnRect.width - marginX;
+    const maxY = vh - btnRect.height - marginY;
+
+    // Generate new position using client coordinates
+    let newX = marginX + Math.random() * (maxX - marginX);
+    let newY = marginY + Math.random() * (maxY - marginY);
+    
+    // Apply magnetic attraction effect based on Yes button growth
+    if (state.yesBtnScale > 1) {
+      // Calculate distance to the center (where Yes button is)
+      const yesRect = elements.yesBtn.getBoundingClientRect();
+      const yesCenter = {
+        x: yesRect.left + yesRect.width / 2,
+        y: yesRect.top + yesRect.height / 2
+      };
+      
+      // Add magnetic resistance when Yes button grows - pushes No button away
+      const resistance = 1 + (Math.min(state.yesBtnScale, 1.5) - 1) * 1.5;
+      
+      // Calculate vector from Yes to the intended No position
+      const dx = newX - yesCenter.x;
+      const dy = newY - yesCenter.y;
+      
+      // Normalize and apply resistance
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1; // Avoid division by zero
+      
+      // Apply the modified position with resistance
+      newX = yesCenter.x + (dx / distance) * distance * resistance;
+      newY = yesCenter.y + (dy / distance) * distance * resistance;
+    }
+    
+    // Ensure button stays within bounds
+    newX = Math.max(marginX, Math.min(newX, maxX));
+    newY = Math.max(marginY, Math.min(newY, maxY));
+
+    // Apply position directly - this is key to smooth animation
+    btn.style.left = `${newX}px`;
+    btn.style.top = `${newY}px`;
+    
+    // Keep rotation and scale in the transform property
+    const rotation = getRandomInt(-12, 12);
+    const scale = state.noBtnClicks % 2 === 0 ? 0.95 : 1.05;
+    btn.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+
+    // Ensure button is fully visible during transition
+    btn.style.opacity = '1';
+    btn.style.visibility = 'visible';
+    btn.style.display = 'block';
+  });
+}
+
+// Helper function to get random integer in inclusive range
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 function growYesButton() {
@@ -290,28 +379,71 @@ function growYesButton() {
 function handleYesClick(e) {
   e.preventDefault();
   
-  // Scale up the Yes button slightly before hiding it
-  elements.yesBtn.style.transition = 'transform 0.3s ease';
-  elements.yesBtn.style.transform = 'scale(1.1)';
+  // Set celebration flag to prevent button from reappearing
+  state.celebrationStarted = true;
   
-  // Hide the buttons, poem, and question with a fade effect
+  // Prevent any other clicks during the process
+  elements.yesBtn.style.pointerEvents = 'none';
+  elements.noBtn.style.pointerEvents = 'none';
+  
+  // The most aggressive approach - remove the No button from the DOM completely
+  if (elements.noBtn.parentNode) {
+    elements.noBtn.parentNode.removeChild(elements.noBtn);
+  }
+  
+  // Also completely hide the Yes button 
+  elements.yesBtn.style.display = 'none';
+  elements.yesBtn.style.visibility = 'hidden';
+  
+  // Hide the poem and question with a fade effect
+  elements.poem.style.opacity = '0';
+  elements.question.style.opacity = '0';
+  
+  // After fade out, hide these elements and trigger celebration
   setTimeout(() => {
-    elements.yesBtn.style.opacity = '0';
-    elements.noBtn.style.opacity = '0';
-    elements.poem.style.opacity = '0';
-    elements.question.style.opacity = '0';
+    elements.poem.style.display = 'none';
+    elements.question.style.display = 'none';
     
-    // After fade out, hide the elements
-    setTimeout(() => {
-      elements.yesBtn.style.display = 'none';
-      elements.noBtn.style.display = 'none';
-      elements.poem.style.display = 'none';
-      elements.question.style.display = 'none';
+    // Trigger the celebration effect
+    triggerCelebration();
+  }, 300);
+}
+
+// Creates a "poof" effect at the no button's position when it disappears
+function createNoButtonPoof(rect) {
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  // Create a bunch of little particles
+  for (let i = 0; i < 10; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'poof-particle';
+    
+    // Random particle styling
+    particle.style.left = `${centerX}px`;
+    particle.style.top = `${centerY}px`;
+    particle.style.backgroundColor = `hsl(${Math.random() * 60 + 340}, 100%, 70%)`;
+    particle.style.width = `${Math.random() * 8 + 4}px`;
+    particle.style.height = particle.style.width;
+    
+    document.body.appendChild(particle);
+    
+    // Animate the particle
+    requestAnimationFrame(() => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 40 + Math.random() * 60;
+      const x = Math.cos(angle) * distance;
+      const y = Math.sin(angle) * distance;
       
-      // Trigger the celebration effect
-      triggerCelebration();
-    }, 300);
-  }, 200);
+      particle.style.transform = `translate(${x}px, ${y}px) scale(0)`;
+      particle.style.opacity = '0';
+      
+      // Remove particle after animation
+      setTimeout(() => {
+        particle.remove();
+      }, 600);
+    });
+  }
 }
 
 // Celebration effect function
@@ -331,6 +463,9 @@ function triggerCelebration() {
   // Show the celebration container
   elements.celebration.style.display = 'block';
   
+  // Add confetti cannon effect
+  createConfettiBurst(30);
+  
   // Initialize celebration petals
   initializeCelebrationPetals();
   
@@ -339,6 +474,46 @@ function triggerCelebration() {
   
   // Show thank you message
   setTimeout(showThankYou, 1500);
+}
+
+// Create a confetti burst effect
+function createConfettiBurst(count) {
+  for (let i = 0; i < count; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    elements.celebration.appendChild(confetti);
+    
+    animateConfetti(confetti);
+  }
+}
+
+// Animate a single confetti piece with physics
+function animateConfetti(element) {
+  const angle = Math.random() * Math.PI * 2;
+  const velocity = 2 + Math.random() * 3;
+  const rotation = (Math.random() - 0.5) * 20;
+  
+  let x = 0;
+  let y = 0;
+  
+  const animate = () => {
+    x += Math.cos(angle) * velocity;
+    y += Math.sin(angle) * velocity + 0.5; // Gravity effect
+    
+    element.style.transform = `
+      translate(${x}px, ${y}px)
+      rotate(${rotation * y}deg)
+    `;
+    
+    if (y < window.innerHeight * 1.5) {
+      requestAnimationFrame(animate);
+    } else {
+      element.remove();
+    }
+  };
+  
+  requestAnimationFrame(animate);
 }
 
 // Initialize celebration petals
@@ -643,6 +818,45 @@ function showThankYou() {
 // Helper function for random number generation
 function getRandomNumber(min, max) {
   return min + Math.random() * (max - min);
+}
+
+// Update ensureButtonVisibility to check the celebration flag
+function ensureButtonVisibility() {
+  // Skip all visibility checks if we're in celebration mode
+  if (state.celebrationStarted) {
+    return;
+  }
+  
+  // Rest of your original function remains the same
+  if (elements.yesBtn.style.opacity === '0' || 
+      elements.yesBtn.style.display === 'none') {
+    return;
+  }
+  
+  if (elements.noBtn.classList.contains('fixed-position')) {
+    // Make sure button is visible by checking computed style
+    const style = window.getComputedStyle(elements.noBtn);
+    if (style.visibility !== 'visible' || style.display === 'none' || parseFloat(style.opacity) < 0.5) {
+      // Only fix visibility if we're not in the process of hiding the button
+      if (elements.yesBtn.style.pointerEvents !== 'none') {
+        console.log("Visibility check: Button not fully visible, fixing");
+        elements.noBtn.style.opacity = '1';
+        elements.noBtn.style.visibility = 'visible';
+        elements.noBtn.style.display = 'block';
+      }
+    }
+    
+    // Also check if button is out of bounds
+    const rect = elements.noBtn.getBoundingClientRect();
+    if (rect.right <= 0 || rect.bottom <= 0 || 
+        rect.left >= window.innerWidth || rect.top >= window.innerHeight) {
+      // Only reposition if we're not in the process of hiding the button
+      if (elements.yesBtn.style.pointerEvents !== 'none') {
+        console.log("Visibility check: Button out of bounds, repositioning");
+        moveButtonRandomly();
+      }
+    }
+  }
 }
 
 // Initialize
