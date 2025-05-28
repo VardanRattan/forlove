@@ -34,14 +34,14 @@ body {
   align-items: center;
   text-align: center;
   position: relative;
-  overflow: hidden; /* Prevent scrolling completely */
-  overscroll-behavior: none; /* Prevent overscroll effects */
-  touch-action: manipulation; /* Better touch handling */
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
   line-height: 1.5;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  -webkit-overflow-scrolling: none; /* Disable iOS momentum scrolling */
+  -webkit-overflow-scrolling: none;
 }
 
 /* Container Styles */
@@ -96,11 +96,11 @@ h1 {
   animation: bounceIn 1s 1s forwards;
   will-change: transform, opacity;
   position: relative;
-  min-height: 60px; /* Ensure container height even when buttons change position */
-  margin-bottom: 0; /* Remove bottom margin to prevent extra space */
-  width: 100%; /* Ensure the container takes full width */
-  max-width: 100%; /* Prevent overflow */
-  padding: 0 5px; /* Add small padding for very small screens */
+  min-height: 60px;
+  margin-bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 5px;
 }
 
 button {
@@ -110,29 +110,36 @@ button {
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: clamp(100px, 25vw, 120px); /* Responsive min-width */
+  min-width: clamp(100px, 25vw, 120px);
   font-weight: 500;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
-  user-select: none; /* Prevent text selection */
-  touch-action: manipulation; /* Optimize for touch */
-  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #yesBtn {
   background-color: var(--success-color);
   color: white;
   transform-origin: center;
-  transition: transform 0.3s ease, font-size 0.3s ease, padding 0.3s ease;
+  transition: all 0.3s ease-out;
   position: relative;
-  z-index: 10; /* Ensure Yes button is always clickable */
+  z-index: 10;
   animation: gentlePulse 2s infinite alternate;
+  box-shadow: 0 0 10px rgba(255, 192, 203, 0.5);
+  will-change: transform, box-shadow;
+}
+
+#yesBtn:hover {
+  box-shadow: 0 0 15px rgba(255, 192, 203, 0.7);
+  transform: scale(1.05);
 }
 
 #noBtn {
   background-color: var(--danger-color);
   color: white;
-  transition: transform 0.3s ease;
+  transition: all 0.2s ease-out;
   z-index: 999;
   position: relative;
   display: block !important;
@@ -149,54 +156,28 @@ button {
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
-  will-change: transform; /* Optimize transform changes */
+  will-change: transform, left, top;
+  transform-origin: center;
 }
 
 #noBtn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+  transform: scale(1.1);
 }
 
 #noBtn:active {
   transform: scale(0.95);
 }
 
-/* When positioned with fixed positioning */
 #noBtn.fixed-position {
   position: fixed;
   z-index: 2000;
   top: 0;
   left: 0;
-  /* Separate transitions for different properties */
-  transition: 
-    left 0.2s ease-out,
-    top 0.2s ease-out,
-    transform 0.15s ease-out,
-    opacity 0.2s linear;
-  will-change: left, top, transform;
-  /* No translate in the default transform */
+  transition: all 0.2s ease-out;
+  will-change: transform, left, top;
   transform: rotate(0deg) scale(1);
-}
-
-#noBtn.fixed-position::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  background: inherit;
-  border-radius: inherit;
-  opacity: 0.3;
-  z-index: -1;
-  transform: scale(1.05);
-  pointer-events: none;
-  animation: fadeOut 0.2s forwards;
-}
-
-@keyframes fadeOut {
-  0% { opacity: 0.3; transform: scale(1.05); }
-  100% { opacity: 0; transform: scale(1.2); }
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Animations */
@@ -223,29 +204,7 @@ button {
   to { transform: scale(1.05); }
 }
 
-/* Sakura Container - Keep this for the celebration effects */
-.sakura-container {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 30px;
-  overflow: hidden;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* Celebration Effects */
-.celebration {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 20;
-  display: none;
-}
-
+/* Thank You Message */
 .thank-you {
   display: flex;
   justify-content: center;
@@ -413,94 +372,12 @@ button {
     visibility: visible;
   }
 
-  .buttons, .audio-control, .sakura-container {
+  .buttons, .audio-control {
     display: none;
   }
 }
 
-/* Celebration Petal Styles */
-.celebration-petal-style1 {
-  width: 30px;
-  height: 20px;
-  background: radial-gradient(ellipse at center, #ffd700 0%, #ffa500 100%);
-  border-radius: 150% 0 150% 0;
-  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-}
-
-.celebration-petal-style2 {
-  width: 25px;
-  height: 25px;
-  background: radial-gradient(ellipse at center, #ff4500 0%, #ff0000 100%);
-  border-radius: 150% 0 150% 150%;
-  box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-}
-
-.celebration-petal-style3 {
-  width: 22px;
-  height: 18px;
-  background: radial-gradient(ellipse at center, #00ff00 0%, #008000 100%);
-  border-radius: 150% 150% 0 150%;
-  box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-}
-
-.celebration-petal-style4 {
-  width: 28px;
-  height: 22px;
-  background: radial-gradient(ellipse at center, #0000ff 0%, #000080 100%);
-  border-radius: 0 150% 150% 150%;
-  box-shadow: 0 0 5px rgba(0, 0, 255, 0.5);
-}
-
-/* Media Queries for better button responsiveness */
-@media (max-width: 480px) {
-  .buttons {
-    gap: 1rem; /* Reduced gap on smaller screens */
-  }
-  
-  button {
-    min-width: clamp(80px, 30vw, 100px); /* Smaller buttons on mobile */
-  }
-}
-
-@media (max-height: 500px) {
-  .buttons {
-    min-height: 50px; /* Smaller minimum height on short screens */
-  }
-  
-  button {
-    padding: 0.5rem 1.2rem; /* Smaller padding on short screens */
-  }
-}
-
-.click-trail {
-  position: fixed;
-  width: 15px;
-  height: 15px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1999;
-  animation: trailFade 0.5s ease-out;
-}
-
-@keyframes trailFade {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
-}
-
-.confetti {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 4px;
-  opacity: 0.8;
-  pointer-events: none;
-  top: 50%;
-  left: 50%;
-  will-change: transform;
-  z-index: 25;
-}
-
+/* Mobile button optimization */
 @media (pointer: coarse) {
   #noBtn {
     min-width: 120px;
@@ -517,16 +394,4 @@ button {
 input, button {
   font-size: 16px !important;
   touch-action: manipulation;
-}
-
-.poof-particle {
-  position: fixed;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 2001;
-  opacity: 1;
-  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1), opacity 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-  will-change: transform, opacity;
 }
