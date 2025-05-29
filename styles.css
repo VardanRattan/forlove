@@ -1,4 +1,4 @@
-/* Base Styles */
+/* Base Styles - Improved Version */
 :root {
   --primary-color: #ff69b4;
   --secondary-color: #ff1493;
@@ -8,6 +8,7 @@
   --background-color: #0a0a0a;
   --font-main: 'Arial', sans-serif;
   --font-size-base: 1rem;
+  --safe-margin: 20px;
 }
 
 * {
@@ -46,7 +47,7 @@ body {
 
 /* Container Styles */
 .container {
-  max-width: 600px;
+  max-width: min(600px, calc(100vw - 2 * var(--safe-margin)));
   width: 90%;
   padding: 2rem 1.5rem;
   margin: 0 auto;
@@ -86,7 +87,7 @@ h1 {
   font-weight: 500;
 }
 
-/* Buttons Section */
+/* Buttons Section - Improved */
 .buttons {
   display: flex;
   gap: 1.5rem;
@@ -100,7 +101,7 @@ h1 {
   margin-bottom: 0;
   width: 100%;
   max-width: 100%;
-  padding: 0 5px;
+  padding: 0 var(--safe-margin);
 }
 
 button {
@@ -111,12 +112,17 @@ button {
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: clamp(100px, 25vw, 120px);
+  min-height: 44px; /* Improved touch target */
   font-weight: 500;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   user-select: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #yesBtn {
@@ -136,6 +142,7 @@ button {
   transform: scale(1.05);
 }
 
+/* Improved No Button with better positioning constraints */
 #noBtn {
   background-color: var(--danger-color);
   color: white;
@@ -145,10 +152,11 @@ button {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  min-height: 40px;
+  min-height: 44px; /* Better touch target */
   min-width: 100px;
+  max-width: 150px; /* Prevent button from being too wide */
   margin: 0;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 8px;
   font-weight: bold;
   box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -158,6 +166,10 @@ button {
   user-select: none;
   will-change: transform, left, top;
   transform-origin: center;
+  /* Ensure button content doesn't overflow */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 #noBtn:hover {
@@ -168,16 +180,25 @@ button {
   transform: scale(0.95);
 }
 
+/* Fixed position class with improved constraints */
 #noBtn.fixed-position {
   position: fixed;
-  z-index: 2000;
-  top: 0;
-  left: 0;
+  transform-origin: center;
   transition: all 0.2s ease-out;
   will-change: transform, left, top;
-  transform: rotate(0deg) scale(1);
-  pointer-events: auto;
-  cursor: pointer;
+  /* Ensure minimum distance from edges */
+  min-width: 100px;
+  min-height: 44px;
+  /* Prevent button from going off-screen */
+  max-width: calc(100vw - 2 * var(--safe-margin));
+  max-height: calc(100vh - 2 * var(--safe-margin));
+}
+
+/* Performance optimizations */
+.buttons button {
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
 /* Animations */
@@ -224,7 +245,7 @@ button {
   box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
   border: 2px solid rgba(255, 105, 180, 0.3);
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-  max-width: 80%;
+  max-width: calc(100vw - 2 * var(--safe-margin));
   text-align: center;
   top: 65%;
   left: 50%;
@@ -256,8 +277,8 @@ button {
 /* Audio Controls */
 .audio-control {
   position: fixed;
-  bottom: max(15px, env(safe-area-inset-bottom, 15px));
-  right: max(15px, env(safe-area-inset-right, 15px));
+  bottom: max(var(--safe-margin), env(safe-area-inset-bottom, var(--safe-margin)));
+  right: max(var(--safe-margin), env(safe-area-inset-right, var(--safe-margin)));
   z-index: 100;
   opacity: 0.5;
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -272,8 +293,8 @@ button {
 }
 
 .audio-control button {
-  width: clamp(40px, 5vw, 50px);
-  height: clamp(40px, 5vw, 50px);
+  width: clamp(44px, 5vw, 50px); /* Improved touch target */
+  height: clamp(44px, 5vw, 50px);
   border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.5);
   color: white;
@@ -289,6 +310,7 @@ button {
   padding: 0;
   margin: 0;
   min-width: unset;
+  min-height: unset;
 }
 
 .audio-control button:hover {
@@ -300,63 +322,97 @@ button {
   transform: scale(0.95);
 }
 
-/* Mobile Optimization */
+/* Improved Mobile Optimization */
 @media (max-width: 768px) {
+  :root {
+    --safe-margin: 15px;
+  }
+  
   .container {
     padding: 1.5rem 1rem;
-    width: 95%;
+    width: calc(100% - 2 * var(--safe-margin));
   }
   
   button {
     padding: 0.7rem 1.5rem;
     font-size: 1rem;
     min-width: 100px;
+    min-height: 44px;
+  }
+  
+  #noBtn {
+    min-width: 100px;
+    max-width: calc(100vw - 4 * var(--safe-margin));
+    padding: 12px 16px;
   }
   
   .thank-you {
     font-size: clamp(1.5rem, 4vw, 2rem);
     padding: 1.2rem;
-  }
-  
-  .audio-control {
-    bottom: max(10px, env(safe-area-inset-bottom, 10px));
-    right: max(10px, env(safe-area-inset-right, 10px));
+    max-width: calc(100vw - 2 * var(--safe-margin));
   }
 }
 
 /* Small mobile devices */
 @media (max-width: 360px) {
-  .audio-control {
-    bottom: max(8px, env(safe-area-inset-bottom, 8px));
-    right: max(8px, env(safe-area-inset-right, 8px));
+  :root {
+    --safe-margin: 10px;
+  }
+  
+  #noBtn {
+    min-width: 80px;
+    max-width: calc(100vw - 4 * var(--safe-margin));
+    padding: 10px 12px;
+    font-size: 0.9rem;
   }
   
   .audio-control button {
-    width: 35px;
-    height: 35px;
+    width: 40px;
+    height: 40px;
     font-size: 1rem;
   }
 }
 
-/* Landscape mode */
+/* Landscape mode optimization */
 @media (max-height: 500px) and (orientation: landscape) {
-  .audio-control {
-    bottom: max(5px, env(safe-area-inset-bottom, 5px));
-    right: max(5px, env(safe-area-inset-right, 5px));
+  :root {
+    --safe-margin: 8px;
   }
   
-  .audio-control button {
-    width: 35px;
-    height: 35px;
-    font-size: 1rem;
+  .container {
+    padding: 1rem;
+  }
+  
+  .verse {
+    margin-bottom: 1rem;
+  }
+  
+  .question {
+    margin-bottom: 1rem;
+  }
+  
+  #noBtn.fixed-position {
+    max-height: calc(100vh - 2 * var(--safe-margin));
   }
 }
 
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  button {
+    border-radius: 0.5rem;
+  }
+}
+
+/* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  
+  #yesBtn {
+    animation: none;
   }
 }
 
@@ -377,16 +433,21 @@ button {
   }
 }
 
-/* Mobile button optimization */
+/* Enhanced touch support */
 @media (pointer: coarse) {
   #noBtn {
     min-width: 120px;
+    min-height: 48px;
     padding: 15px 25px;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
   }
   
   .buttons {
     gap: 2rem;
+  }
+  
+  button {
+    min-height: 48px;
   }
 }
 
@@ -394,4 +455,13 @@ button {
 input, button {
   font-size: 16px !important;
   touch-action: manipulation;
+}
+
+/* Additional safeguards for button positioning */
+#noBtn.fixed-position {
+  /* Fallback positioning if calculations fail */
+  min-left: var(--safe-margin);
+  min-top: var(--safe-margin);
+  max-left: calc(100vw - var(--safe-margin));
+  max-top: calc(100vh - var(--safe-margin));
 }

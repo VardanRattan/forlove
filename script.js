@@ -1,7 +1,9 @@
-// script.js
 // Configuration
 const CONFIG = {
-  YES_GROWTH_FACTOR: 0.15
+  YES_GROWTH_FACTOR: 0.15,
+  SAFE_MARGIN: 20, // Reduced from inconsistent values
+  ANIMATION_DURATION: 300,
+  DEBOUNCE_DELAY: 100
 };
 
 // State
@@ -12,7 +14,8 @@ let state = {
   audioInitialized: false,
   audioSupported: false,
   isProcessingClick: false,
-  interactionEnded: false
+  interactionEnded: false,
+  lastMoveTime: 0
 };
 
 // DOM Elements
@@ -24,6 +27,20 @@ const elements = {
   question: document.getElementById('question'),
   bgMusic: document.getElementById('bgMusic'),
   audioToggle: document.getElementById('audioToggle')
+};
+
+// Cached viewport dimensions
+let viewport = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+  lastUpdate: 0
+};
+
+// Performance optimization: Cache button dimensions
+let buttonDimensions = {
+  width: 0,
+  height: 0,
+  lastUpdate: 0
 };
 
 // Initialization
@@ -42,6 +59,9 @@ function init() {
     return;
   }
   
+  // Initialize viewport cache
+  updateViewportCache();
+  
   // Yes button setup
   elements.yesBtn.style.fontSize = '1.1rem';
   elements.yesBtn.style.position = 'relative';
@@ -50,21 +70,20 @@ function init() {
   elements.yesBtn.style.display = 'block';
   elements.yesBtn.style.visibility = 'visible';
   
-  // No button setup
-  elements.noBtn.style.transform = 'none';
-  elements.noBtn.style.position = 'relative';
-  elements.noBtn.style.opacity = '1';
-  elements.noBtn.style.display = 'block';
-  elements.noBtn.style.visibility = 'visible';
+  // No button setup with improved positioning
+  resetNoButtonPosition();
   
-  // Remove any classes that might affect positioning
-  elements.noBtn.classList.remove('fixed-position');
-  
-  // Add resize listener
+  // Add optimized resize listener
+  let resizeTimeout;
   window.addEventListener('resize', () => {
-    if (!state.interactionEnded && elements.noBtn.classList.contains('fixed-position')) {
-      moveButtonRandomly();
-    }
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      updateViewportCache();
+      updateButtonDimensionsCache();
+      if (!state.interactionEnded && elements.noBtn.classList.contains('fixed-position')) {
+        moveButtonRandomly();
+      }
+    }, CONFIG.DEBOUNCE_DELAY);
   });
   
   // Add event listeners
@@ -76,23 +95,44 @@ function init() {
   console.log("Initialization complete");
 }
 
+// Performance: Update viewport cache only when needed
+function updateViewportCache() {
+  const now = Date.now();
+  if (now - viewport.lastUpdate > 100) { // Cache for 100ms
+    viewport.width = window.innerWidth;
+    viewport.height = window.innerHeight;
+    viewport.lastUpdate = now;
+  }
+}
+
+// Performance: Cache button dimensions
+function updateButtonDimensionsCache() {
+  const now = Date.now();
+  if (now - buttonDimensions.lastUpdate > 500) { // Cache for 500ms
+    const rect = elements.noBtn.getBoundingClientRect();
+    buttonDimensions.width = rect.width;
+    buttonDimensions.height = rect.height;
+    buttonDimensions.lastUpdate = now;
+  }
+}
+
+// Reset No button to initial position
+function resetNoButtonPosition() {
+  elements.noBtn.style.transform = 'none';
+  elements.noBtn.style.position = 'relative';
+  elements.noBtn.style.opacity = '1';
+  elements.noBtn.style.display = 'block';
+  elements.noBtn.style.visibility = 'visible';
+  elements.noBtn.style.left = 'auto';
+  elements.noBtn.style.top = 'auto';
+  elements.noBtn.classList.remove('fixed-position');
+}
+
 // Event Listeners
 function setupEventListeners() {
-  document.addEventListener('click', (e) => {
-    if (e.target === elements.noBtn) {
-      handleNoClick(e);
-    } else if (e.target === elements.yesBtn) {
-      handleYesClick(e);
-    } else if (e.target === elements.audioToggle) {
-      toggleAudio();
-    }
-  });
-  
-  document.addEventListener('touchstart', (e) => {
-    if (e.target === elements.noBtn) {
-      handleNoClick(e);
-    }
-  });
+  // Use event delegation for better performance
+  document.addEventListener('click', handleDocumentClick);
+  document.addEventListener('touchstart', handleDocumentTouch, { passive: true });
   
   // Add multiple event listeners for first interaction
   const firstInteractionEvents = ['click', 'touchstart', 'keydown'];
@@ -110,7 +150,24 @@ function setupEventListeners() {
   });
 }
 
-// Audio Handling
+// Optimized event handlers
+function handleDocumentClick(e) {
+  if (e.target === elements.noBtn) {
+    handleNoClick(e);
+  } else if (e.target === elements.yesBtn) {
+    handleYesClick(e);
+  } else if (e.target === elements.audioToggle) {
+    toggleAudio();
+  }
+}
+
+function handleDocumentTouch(e) {
+  if (e.target === elements.noBtn) {
+    handleNoClick(e);
+  }
+}
+
+// Audio Handling (unchanged but optimized)
 function handleAudio() {
   state.audioSupported = !!elements.bgMusic.canPlayType;
   
@@ -182,114 +239,99 @@ function toggleAudio() {
   }
 }
 
-// No Button Handler
+// Improved No Button Handler with debouncing
 function handleNoClick(e) {
   e.preventDefault();
-  if (state.isProcessingClick || state.interactionEnded) return;
+  
+  const now = Date.now();
+  if (state.isProcessingClick || state.interactionEnded || (now - state.lastMoveTime) < CONFIG.DEBOUNCE_DELAY) {
+    return;
+  }
   
   state.isProcessingClick = true;
+  state.lastMoveTime = now;
   state.noBtnClicks++;
 
   if (!elements.noBtn.classList.contains('fixed-position')) {
     elements.noBtn.classList.add('fixed-position');
+    updateButtonDimensionsCache(); // Cache dimensions when switching to fixed
   }
 
-  moveButtonRandomly();
-  
-  setTimeout(() => {
-    state.isProcessingClick = false;
-    growYesButton();
-  }, 300);
-}
-
-function moveButtonRandomly() {
-  if (state.interactionEnded) return;
-
+  // Use requestAnimationFrame for smooth animation
   requestAnimationFrame(() => {
-    const btn = elements.noBtn;
-    if (!btn || !document.contains(btn)) return;
-
-    // Always set to fixed before measuring
-    btn.style.position = 'fixed';
-    // Remove any previous left/top to get natural size
-    btn.style.left = '0px';
-    btn.style.top = '0px';
-
-    // Get the true size of the button
-    const btnRect = btn.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-
-    // Safe margins (ensure button is always fully visible)
-    let marginX = Math.max(vw * 0.05, 30);
-    let marginY = Math.max(vh * 0.05, 30);
-
-    // Clamp margins if button is too big for viewport
-    if (btnRect.width + 2 * marginX > vw) {
-      marginX = Math.max((vw - btnRect.width) / 2, 0);
-    }
-    if (btnRect.height + 2 * marginY > vh) {
-      marginY = Math.max((vh - btnRect.height) / 2, 0);
-    }
-
-    // Calculate min/max positions so button stays fully in view
-    const minX = marginX;
-    const maxX = vw - btnRect.width - marginX;
-    const minY = marginY;
-    const maxY = vh - btnRect.height - marginY;
-
-    // If the available space is negative, center the button
-    let newX, newY;
-    if (maxX < minX) {
-      newX = (vw - btnRect.width) / 2;
-    } else {
-      newX = minX + Math.random() * (maxX - minX);
-    }
-    if (maxY < minY) {
-      newY = (vh - btnRect.height) / 2;
-    } else {
-      newY = minY + Math.random() * (maxY - minY);
-    }
-
-    // Magnetic effect (optional)
-    if (state.yesBtnScale > 1 && maxX >= minX && maxY >= minY) {
-      const yesRect = elements.yesBtn.getBoundingClientRect();
-      const yesCenter = {
-        x: yesRect.left + yesRect.width / 2,
-        y: yesRect.top + yesRect.height / 2
-      };
-      const dx = newX - yesCenter.x;
-      const dy = newY - yesCenter.y;
-      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-      const resistance = 1 + (Math.min(state.yesBtnScale, 1.5) - 1) * 1.5;
-      newX = yesCenter.x + (dx / distance) * distance * resistance;
-      newY = yesCenter.y + (dy / distance) * distance * resistance;
-      // Clamp again after magnetic effect
-      newX = Math.max(minX, Math.min(newX, maxX));
-      newY = Math.max(minY, Math.min(newY, maxY));
-    }
-
-    // Apply position
-    btn.style.left = `${newX}px`;
-    btn.style.top = `${newY}px`;
-
-    // Only use transform for rotation/scale
-    const rotation = getRandomInt(-12, 12);
-    const scale = state.noBtnClicks % 2 === 0 ? 0.95 : 1.05;
-    btn.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-
-    btn.style.opacity = '1';
-    btn.style.visibility = 'visible';
-    btn.style.display = 'block';
+    moveButtonRandomly();
+    
+    setTimeout(() => {
+      state.isProcessingClick = false;
+      growYesButton();
+    }, CONFIG.ANIMATION_DURATION);
   });
 }
 
+// Completely rewritten moveButtonRandomly function
+function moveButtonRandomly() {
+  if (state.interactionEnded || !elements.noBtn) return;
+
+  // Update caches
+  updateViewportCache();
+  updateButtonDimensionsCache();
+  
+  // Get current dimensions
+  const vw = viewport.width;
+  const vh = viewport.height;
+  const btnWidth = buttonDimensions.width || 120; // Fallback width
+  const btnHeight = buttonDimensions.height || 50; // Fallback height
+  
+  // Calculate safe boundaries with proper margins
+  const margin = CONFIG.SAFE_MARGIN;
+  const minX = margin;
+  const maxX = Math.max(minX + 50, vw - btnWidth - margin); // Ensure minimum 50px space
+  const minY = margin;
+  const maxY = Math.max(minY + 50, vh - btnHeight - margin); // Ensure minimum 50px space
+  
+  // Validate boundaries
+  if (maxX <= minX || maxY <= minY) {
+    console.warn("Insufficient space for button positioning, centering instead");
+    // Center the button if there's not enough space
+    elements.noBtn.style.position = 'fixed';
+    elements.noBtn.style.left = '50%';
+    elements.noBtn.style.top = '50%';
+    elements.noBtn.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
+  // Generate safe random position
+  const newX = minX + Math.random() * (maxX - minX);
+  const newY = minY + Math.random() * (maxY - minY);
+  
+  // Clamp values to ensure they're within bounds
+  const clampedX = Math.max(minX, Math.min(newX, maxX));
+  const clampedY = Math.max(minY, Math.min(newY, maxY));
+  
+  // Apply position using requestAnimationFrame for smoother animation
+  requestAnimationFrame(() => {
+    elements.noBtn.style.position = 'fixed';
+    elements.noBtn.style.left = `${clampedX}px`;
+    elements.noBtn.style.top = `${clampedY}px`;
+    
+    // Add visual effects
+    const rotation = getRandomInt(-12, 12);
+    const scale = state.noBtnClicks % 2 === 0 ? 0.95 : 1.05;
+    elements.noBtn.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+    
+    // Debug logging (remove in production)
+    console.log(`Button moved to: ${clampedX}, ${clampedY} (viewport: ${vw}x${vh}, button: ${btnWidth}x${btnHeight})`);
+  });
+}
+
+// Utility function (unchanged)
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
+// Optimized growYesButton function
 function growYesButton() {
   if (state.yesBtnScale >= 1.5) {
     state.yesBtnScale = 1.5;
@@ -297,16 +339,19 @@ function growYesButton() {
     state.yesBtnScale += CONFIG.YES_GROWTH_FACTOR;
   }
   
-  elements.yesBtn.style.transform = `scale(${state.yesBtnScale})`;
-  
-  const textScale = 1 + ((state.yesBtnScale - 1) * 0.7);
-  elements.yesBtn.style.fontSize = `${textScale}rem`;
-  
-  const paddingAdjust = Math.max(0.8, 0.8 / state.yesBtnScale);
-  elements.yesBtn.style.padding = `${paddingAdjust}rem ${paddingAdjust * 1.8}rem`;
+  // Use requestAnimationFrame for smoother scaling
+  requestAnimationFrame(() => {
+    elements.yesBtn.style.transform = `scale(${state.yesBtnScale})`;
+    
+    const textScale = 1 + ((state.yesBtnScale - 1) * 0.7);
+    elements.yesBtn.style.fontSize = `${textScale}rem`;
+    
+    const paddingAdjust = Math.max(0.8, 0.8 / state.yesBtnScale);
+    elements.yesBtn.style.padding = `${paddingAdjust}rem ${paddingAdjust * 1.8}rem`;
+  });
 }
 
-// Yes Button Handler
+// Yes Button Handler (unchanged)
 function handleYesClick(e) {
   e.preventDefault();
   
