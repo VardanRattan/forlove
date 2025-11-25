@@ -24,33 +24,37 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-/* Different petal styles using pure CSS shapes */
+/* Different petal styles using pure CSS shapes - Pink and Yellow theme */
 .petal-style1 {
   width: 30px;
   height: 20px;
-  background: radial-gradient(ellipse at center, #ffd6e5 0%, #ffb7c5 100%);
+  background: radial-gradient(ellipse at center, #ff69b4 0%, #ffd700 100%);
   border-radius: 150% 0 150% 0;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
 }
 
 .petal-style2 {
   width: 25px;
   height: 25px;
-  background: radial-gradient(ellipse at center, #ffe1ed 0%, #ffc1ce 100%);
+  background: radial-gradient(ellipse at center, #ff1493 0%, #ffed4e 100%);
   border-radius: 150% 0 150% 150%;
+  box-shadow: 0 0 5px rgba(255, 105, 180, 0.3);
 }
 
 .petal-style3 {
   width: 22px;
   height: 18px;
-  background: radial-gradient(ellipse at center, #ffecf3 0%, #ffdbea 100%);
+  background: radial-gradient(ellipse at center, #ffe6f2 0%, #fff9c4 100%);
   border-radius: 150% 150% 0 150%;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.2);
 }
 
 .petal-style4 {
   width: 28px;
   height: 22px;
-  background: radial-gradient(ellipse at center, #ffdaea 0%, #ffadc0 100%);
+  background: radial-gradient(ellipse at center, #ffb7c5 0%, #ffed4e 100%);
   border-radius: 0 150% 150% 150%;
+  box-shadow: 0 0 5px rgba(255, 105, 180, 0.3);
 }
 
 /* Looping fall animation */

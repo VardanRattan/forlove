@@ -15,6 +15,7 @@ window.APP_EVENTS = APP_EVENTS;
 // State
 let state = {
   yesBtnScale: 1,
+  noBtnScale: 1,
   noBtnClicks: 0,
   isAudioPlaying: false,
   audioInitialized: false,
@@ -31,6 +32,7 @@ const elements = {
   thankYou: document.getElementById('thankYou'),
   poem: document.getElementById('verse'),
   question: document.getElementById('question'),
+  container: document.getElementById('mainContent'),
   bgMusic: document.getElementById('bgMusic'),
   audioToggle: document.getElementById('audioToggle')
 };
@@ -39,6 +41,8 @@ const elements = {
 let viewport = {
   width: window.innerWidth,
   height: window.innerHeight,
+  offsetLeft: 0,
+  offsetTop: 0,
   lastUpdate: 0
 };
 
@@ -55,6 +59,7 @@ function init() {
   
   // Reset the state
   state.yesBtnScale = 1;
+  state.noBtnScale = 1;
   state.noBtnClicks = 0;
   state.isProcessingClick = false;
   state.interactionEnded = false;
@@ -86,9 +91,6 @@ function init() {
     resizeTimeout = setTimeout(() => {
       updateViewportCache();
       updateButtonDimensionsCache();
-      if (!state.interactionEnded && elements.noBtn.classList.contains('fixed-position')) {
-        moveButtonRandomly();
-      }
       window.dispatchEvent(new CustomEvent(APP_EVENTS.DEBOUNCED_RESIZE));
     }, CONFIG.DEBOUNCE_DELAY);
   });
@@ -106,8 +108,18 @@ function init() {
 function updateViewportCache() {
   const now = Date.now();
   if (now - viewport.lastUpdate > 100) { // Cache for 100ms
-    viewport.width = window.innerWidth;
-    viewport.height = window.innerHeight;
+    const visualViewport = window.visualViewport;
+    if (visualViewport) {
+      viewport.width = visualViewport.width;
+      viewport.height = visualViewport.height;
+      viewport.offsetLeft = visualViewport.offsetLeft || 0;
+      viewport.offsetTop = visualViewport.offsetTop || 0;
+    } else {
+      viewport.width = window.innerWidth;
+      viewport.height = window.innerHeight;
+      viewport.offsetLeft = 0;
+      viewport.offsetTop = 0;
+    }
     viewport.lastUpdate = now;
   }
 }
@@ -123,15 +135,17 @@ function updateButtonDimensionsCache() {
   }
 }
 
-// Reset No button to initial position
+// Reset No button to initial state
 function resetNoButtonPosition() {
-  elements.noBtn.style.transform = 'none';
+  elements.noBtn.style.transform = 'scale(1)';
   elements.noBtn.style.position = 'relative';
   elements.noBtn.style.opacity = '1';
   elements.noBtn.style.display = 'block';
   elements.noBtn.style.visibility = 'visible';
   elements.noBtn.style.left = 'auto';
   elements.noBtn.style.top = 'auto';
+  elements.noBtn.style.fontSize = '1.1rem';
+  elements.noBtn.style.padding = '0.8rem 1.44rem';
   elements.noBtn.classList.remove('fixed-position');
 }
 
@@ -255,85 +269,45 @@ function toggleAudio() {
   }
 }
 
-// Improved No Button Handler with debouncing
+// Simple No Button Handler - scales down on each click
 function handleNoClick(e) {
   e.preventDefault();
-  
+
   const now = Date.now();
   if (state.isProcessingClick || state.interactionEnded || (now - state.lastMoveTime) < CONFIG.DEBOUNCE_DELAY) {
     return;
   }
-  
+
   state.isProcessingClick = true;
   state.lastMoveTime = now;
   state.noBtnClicks++;
 
-  if (!elements.noBtn.classList.contains('fixed-position')) {
-    elements.noBtn.classList.add('fixed-position');
-    updateButtonDimensionsCache(); // Cache dimensions when switching to fixed
-  }
+  // Scale down the No button
+  shrinkNoButton();
 
-  // Use requestAnimationFrame for smooth animation
-  requestAnimationFrame(() => {
-    moveButtonRandomly();
-    
-    setTimeout(() => {
-      state.isProcessingClick = false;
-      growYesButton();
-    }, CONFIG.ANIMATION_DURATION);
-  });
+  setTimeout(() => {
+    state.isProcessingClick = false;
+    growYesButton();
+  }, CONFIG.ANIMATION_DURATION);
 }
 
-// Completely rewritten moveButtonRandomly function
-function moveButtonRandomly() {
-  if (state.interactionEnded || !elements.noBtn) return;
-
-  // Update caches
-  updateViewportCache();
-  updateButtonDimensionsCache();
-  
-  // Get current dimensions
-  const vw = viewport.width;
-  const vh = viewport.height;
-  const btnWidth = buttonDimensions.width || 120; // Fallback width
-  const btnHeight = buttonDimensions.height || 50; // Fallback height
-  
-  // Calculate safe boundaries with proper margins
-  const margin = CONFIG.SAFE_MARGIN;
-  const minX = margin;
-  const maxX = Math.max(minX + 50, vw - btnWidth - margin); // Ensure minimum 50px space
-  const minY = margin;
-  const maxY = Math.max(minY + 50, vh - btnHeight - margin); // Ensure minimum 50px space
-  
-  // Validate boundaries
-  if (maxX <= minX || maxY <= minY) {
-    console.warn("Insufficient space for button positioning, centering instead");
-    // Center the button if there's not enough space
-    elements.noBtn.style.position = 'fixed';
-    elements.noBtn.style.left = '50%';
-    elements.noBtn.style.top = '50%';
-    elements.noBtn.style.transform = 'translate(-50%, -50%)';
-    return;
+// Simple shrink No button function
+function shrinkNoButton() {
+  if (state.noBtnScale <= 0.3) {
+    state.noBtnScale = 0.3; // Minimum scale
+  } else {
+    state.noBtnScale -= 0.15; // Scale down by 15% each click
   }
 
-  // Generate safe random position
-  const newX = minX + Math.random() * (maxX - minX);
-  const newY = minY + Math.random() * (maxY - minY);
-  
-  // Clamp values to ensure they're within bounds
-  const clampedX = Math.max(minX, Math.min(newX, maxX));
-  const clampedY = Math.max(minY, Math.min(newY, maxY));
-  
-  // Apply position using requestAnimationFrame for smoother animation
   requestAnimationFrame(() => {
-    elements.noBtn.style.position = 'fixed';
-    elements.noBtn.style.left = `${clampedX}px`;
-    elements.noBtn.style.top = `${clampedY}px`;
-    
-    // Add visual effects
-    const rotation = getRandomInt(-12, 12);
-    const scale = state.noBtnClicks % 2 === 0 ? 0.95 : 1.05;
-    elements.noBtn.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+    elements.noBtn.style.transform = `scale(${state.noBtnScale})`;
+
+    // Adjust font size and padding proportionally
+    const textScale = Math.max(0.5, state.noBtnScale);
+    elements.noBtn.style.fontSize = `${textScale}rem`;
+
+    const paddingAdjust = Math.max(0.4, 0.8 * state.noBtnScale);
+    elements.noBtn.style.padding = `${paddingAdjust}rem ${paddingAdjust * 1.8}rem`;
   });
 }
 
