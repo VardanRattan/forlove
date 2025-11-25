@@ -15,7 +15,6 @@ A beautiful interactive website with a playful "Will you be mine?" proposal. Fea
 
 - Pure HTML, CSS, and JavaScript
 - CSS animations for the sakura petals
-- Dynamic particle system for the celebration effect
 - No external libraries or dependencies
 
 ## How to Use

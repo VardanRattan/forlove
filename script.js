@@ -6,6 +6,12 @@ const CONFIG = {
   DEBOUNCE_DELAY: 100
 };
 
+const APP_EVENTS = {
+  DEBOUNCED_RESIZE: 'app:debouncedResize'
+};
+
+window.APP_EVENTS = APP_EVENTS;
+
 // State
 let state = {
   yesBtnScale: 1,
@@ -83,6 +89,7 @@ function init() {
       if (!state.interactionEnded && elements.noBtn.classList.contains('fixed-position')) {
         moveButtonRandomly();
       }
+      window.dispatchEvent(new CustomEvent(APP_EVENTS.DEBOUNCED_RESIZE));
     }, CONFIG.DEBOUNCE_DELAY);
   });
   
@@ -131,18 +138,15 @@ function resetNoButtonPosition() {
 // Event Listeners
 function setupEventListeners() {
   // Use event delegation for better performance
+  document.addEventListener('pointerdown', handlePointerDown);
   document.addEventListener('click', handleDocumentClick);
-  document.addEventListener('touchstart', handleDocumentTouch, { passive: true });
   
   // Add multiple event listeners for first interaction
-  const firstInteractionEvents = ['click', 'touchstart', 'keydown'];
+  const firstInteractionEvents = ['pointerdown', 'keydown'];
   const firstInteractionHandler = (event) => {
     if (event.target !== elements.audioToggle) {
       playAudioOnFirstInteraction();
     }
-    firstInteractionEvents.forEach(type => {
-      document.removeEventListener(type, firstInteractionHandler);
-    });
   };
   
   firstInteractionEvents.forEach(eventType => {
@@ -152,6 +156,10 @@ function setupEventListeners() {
 
 // Optimized event handlers
 function handleDocumentClick(e) {
+  if (e.detail !== 0) {
+    return; // Pointer interactions are handled in pointerdown
+  }
+  
   if (e.target === elements.noBtn) {
     handleNoClick(e);
   } else if (e.target === elements.yesBtn) {
@@ -161,9 +169,17 @@ function handleDocumentClick(e) {
   }
 }
 
-function handleDocumentTouch(e) {
-  if (e.target === elements.noBtn) {
+function handlePointerDown(e) {
+  const target = e.target;
+  if (target === elements.noBtn) {
     handleNoClick(e);
+    e.preventDefault();
+  } else if (target === elements.yesBtn) {
+    handleYesClick(e);
+    e.preventDefault();
+  } else if (target === elements.audioToggle) {
+    toggleAudio();
+    e.preventDefault();
   }
 }
 
@@ -318,9 +334,6 @@ function moveButtonRandomly() {
     const rotation = getRandomInt(-12, 12);
     const scale = state.noBtnClicks % 2 === 0 ? 0.95 : 1.05;
     elements.noBtn.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-    
-    // Debug logging (remove in production)
-    console.log(`Button moved to: ${clampedX}, ${clampedY} (viewport: ${vw}x${vh}, button: ${btnWidth}x${btnHeight})`);
   });
 }
 

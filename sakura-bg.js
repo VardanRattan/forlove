@@ -1,8 +1,3 @@
-/**
- * Enhanced Sakura Background
- * Creates and animates sakura petals in the background with looping animation
- */
-
 // Configuration for the falling petals
 const SAKURA_CONFIG = {
   TOTAL_PETALS: 100,           // Total number of petals in the air
@@ -15,8 +10,8 @@ const SAKURA_CONFIG = {
   WIND_UPDATE_INTERVAL: 100   // How often to update wind effect (ms)
 };
 
-// Get the sakura container
-const sakuraContainer = document.querySelector('.sakura-bg');
+// Get the sakura container (lazy)
+let sakuraContainer = null;
 
 // Wind state
 let windMagnitude = 0.2;
@@ -28,6 +23,7 @@ let petals = [];
 
 // Initialize the sakura background
 function initSakuraBackground() {
+  sakuraContainer = document.querySelector('.sakura-bg');
   if (!sakuraContainer) return;
   
   // Clear any existing petals
@@ -128,135 +124,37 @@ function getRandomNumber(min, max) {
   return min + Math.random() * (max - min);
 }
 
+function repopulatePetals() {
+  if (!sakuraContainer) {
+    sakuraContainer = document.querySelector('.sakura-bg');
+    if (!sakuraContainer) return;
+  }
+  
+  petals.forEach(petal => petal.remove());
+  petals = [];
+  
+  let currentBatch = 0;
+  (function createBatch() {
+    const start = currentBatch * SAKURA_CONFIG.BATCH_SIZE;
+    const end = Math.min(start + SAKURA_CONFIG.BATCH_SIZE, SAKURA_CONFIG.TOTAL_PETALS);
+    
+    for (let i = start; i < end; i++) {
+      const petal = createLoopingPetal();
+      petals.push(petal);
+    }
+    
+    currentBatch++;
+    
+    if (currentBatch * SAKURA_CONFIG.BATCH_SIZE < SAKURA_CONFIG.TOTAL_PETALS) {
+      setTimeout(createBatch, 50);
+    }
+  })();
+}
+
 // Initialize when the DOM is loaded
 document.addEventListener('DOMContentLoaded', initSakuraBackground);
 
-// Reinitialize on window resize for better distribution
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => {
-    petals.forEach(petal => petal.remove());
-    petals = [];
-    
-    // Create petals in batches
-    let currentBatch = 0;
-    function createBatch() {
-      const start = currentBatch * SAKURA_CONFIG.BATCH_SIZE;
-      const end = Math.min(start + SAKURA_CONFIG.BATCH_SIZE, SAKURA_CONFIG.TOTAL_PETALS);
-      
-      for (let i = start; i < end; i++) {
-        const petal = createLoopingPetal();
-        petals.push(petal);
-      }
-      
-      currentBatch++;
-      
-      if (currentBatch * SAKURA_CONFIG.BATCH_SIZE < SAKURA_CONFIG.TOTAL_PETALS) {
-        setTimeout(createBatch, 50);
-      }
-    }
-    
-    createBatch();
-  }, 250);
-});
+const RESIZE_EVENT = (window.APP_EVENTS && window.APP_EVENTS.DEBOUNCED_RESIZE) || 'app:debouncedResize';
 
-function toggleAudio() {
-  console.log("Audio toggle clicked. Current state:", state.isAudioPlaying);
-  
-  // Make sure audio is initialized
-  if (!state.audioInitialized) {
-    state.audioInitialized = true;
-  }
-  
-  if (state.isAudioPlaying) {
-    // Currently playing - pause it
-    console.log("Pausing audio");
-    elements.bgMusic.pause();
-    state.isAudioPlaying = false;
-    elements.audioToggle.innerHTML = '🔇';
-  } else {
-    // Currently paused - play it
-    console.log("Attempting to play audio");
-    elements.bgMusic.play()
-      .then(() => {
-        console.log("Audio resumed successfully");
-        state.isAudioPlaying = true;
-        elements.audioToggle.innerHTML = '🔊';
-      })
-      .catch(error => {
-        console.log("Audio couldn't resume:", error);
-        state.isAudioPlaying = false;
-        elements.audioToggle.innerHTML = '🔇';
-      });
-  }
-}
-
-function moveButtonRandomly() {
-  // Get the current window dimensions to ensure button stays in viewport
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  
-  // Get button dimensions
-  const btnRect = elements.noBtn.getBoundingClientRect();
-  const btnWidth = btnRect.width;
-  const btnHeight = btnRect.height;
-  
-  // Calculate the maximum allowed position values
-  // Use a much larger safety margin to ensure button is always fully visible
-  const safeMargin = 80; // Increased from 60 to 80
-  const maxX = windowWidth - btnWidth - safeMargin;
-  const maxY = windowHeight - btnHeight - safeMargin;
-  
-  // Calculate a random position that's guaranteed to be visible
-  // Limit to a smaller range for more reliability
-  const randomX = Math.min(Math.max(safeMargin, Math.random() * (maxX - safeMargin)), maxX - safeMargin);
-  
-  // For Y position, prefer the upper 70% of the visible area
-  // but with stricter bounds to ensure visibility
-  let randomY;
-  if (Math.random() < 0.8) { // 80% chance to be in the upper portion
-    // Upper 60% of the screen with extra safety margin
-    randomY = Math.min(Math.max(safeMargin, Math.random() * (maxY * 0.5)), maxY * 0.5);
-  } else {
-    // Lower 40% of the screen, but with stricter bounds
-    randomY = Math.min(Math.max(maxY * 0.5 + safeMargin, Math.random() * (maxY * 0.8)), maxY * 0.8);
-  }
-  
-  // Reset any previous transform
-  elements.noBtn.style.transform = 'none';
-  
-  // Apply the new position
-  elements.noBtn.style.position = 'fixed';
-  elements.noBtn.style.left = `${randomX}px`;
-  elements.noBtn.style.top = `${randomY}px`;
-  
-  // Add a slight rotation for fun
-  const rotation = Math.random() * 20 - 10; // -10 to +10 degrees
-  elements.noBtn.style.transform = `rotate(${rotation}deg)`;
-}
-
-function triggerCelebration() {
-  // Hide the original sakura background with a fade-out effect
-  const sakuraBg = document.querySelector('.sakura-bg');
-  if (sakuraBg) {
-    sakuraBg.style.transition = 'opacity 1s ease-out';
-    sakuraBg.style.opacity = '0';
-    
-    // Remove it after the fade-out completes
-    setTimeout(() => {
-      sakuraBg.remove();
-    }, 1000);
-  }
-  
-  // Show the celebration container
-  elements.celebration.style.display = 'block';
-  
-  // Initialize celebration petals
-  initializeCelebrationPetals();
-  
-  // Start wind changes for celebration
-  setInterval(changeCelebrationWind, 3000);
-  
-  // Show thank you message
-  setTimeout(showThankYou, 1500);
-} 
+// Reinitialize on debounced resize from main script
+window.addEventListener(RESIZE_EVENT, repopulatePetals);
